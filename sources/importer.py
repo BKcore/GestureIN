@@ -44,8 +44,31 @@ def detect_hand(image, file):
         features = cv.GoodFeaturesToTrack(wip8U, eig, temp, 40, quality, min_distance, None, 3, 0, 0.04)
 
         for (x,y) in features:
-            print int(x)
             cv.Circle (wipC, (int(x), int(y)), 3, (0, 255, 0), -1, 8, 0)
+
+        hull = cv.ConvexHull2(features, cv.CreateMemStorage(), return_points=True)
+
+        first    = None
+        last     = None
+        previous = None 
+
+        for p in hull:
+            if first == None:
+                first = p
+            else:
+                cv.Line(wipC, previous, p, (0, 255, 0))                
+
+            previous = p
+            last     = p
+
+        cv.Line(wipC, last, first, (0, 255, 0))
+
+        contours = cv.FindContours(wip8U, cv.CreateMemStorage())
+        hull     = cv.ConvexHull2(features, cv.CreateMemStorage())
+        # defects  = cv.ConvexityDefects(contour, hull, cv.CreateMemStorage())
+
+        # for p in defects:
+            # print str(p)
 
         result = wipC
 
