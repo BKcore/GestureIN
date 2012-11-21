@@ -11,12 +11,25 @@ parser.add_option("-m", "--mode", dest="mode", help="Detection mode (if cdt)", m
 (options, args) = parser.parse_args()
 
 def loadSample(file):
-    return np.asarray(cv.Load(file))
+	im = np.asarray(cv.Load(file))
+	im = 255-(im/np.max(im)*255).astype('uint8')
+	return im
 
-cv2.imshow("Window", loadSample(options.filename))
+def extractBinary(img):
+	element = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
+	img = cv2.equalizeHist(img)
+	img = cv2.erode(img, element)
+	img = cv2.medianBlur(img, 3)
+	#img = cv2.dilate(img, element)
+	_,img = cv2.threshold(img, 0.91*255, 255, cv2.THRESH_BINARY)
+	return img
 
+img_ref = loadSample(options.filename)
+img = extractBinary(img_ref)
 
+cv2.namedWindow("Reference")
+cv2.namedWindow("Debug")
+cv2.imshow("Reference", img_ref)
+cv2.imshow("Debug", img)
 
-cv2.waitKey(0);
-
-#detect_hand(imagedata, options.filename)
+cv2.waitKey(0)
