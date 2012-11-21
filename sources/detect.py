@@ -21,15 +21,44 @@ def extractBinary(img):
 	img = cv2.erode(img, element)
 	img = cv2.medianBlur(img, 3)
 	#img = cv2.dilate(img, element)
-	_,img = cv2.threshold(img, 0.91*255, 255, cv2.THRESH_BINARY)
-	return img
+	_, imb = cv2.threshold(img, 0.91*255, 255, cv2.THRESH_BINARY)
+	return imb
 
-img_ref = loadSample(options.filename)
-img = extractBinary(img_ref)
+def drawPolygon(im, points, color):
+	first = None
+	last  = None
+	prev  = None
+
+	for p in points:
+		if first == None:
+			first = p
+		else:
+			cv2.line(im, prev, p, color)
+
+		prev = p
+		last = p
+
+	cv2.line(im, last, first, color)
+
+img_ref 		 = loadSample(options.filename)
+imb 				 = extractBinary(img_ref)
+imb_contours = imb.copy()
+
+contours, _ = cv2.findContours(imb_contours, cv.CV_RETR_LIST, cv.CV_CHAIN_APPROX_SIMPLE)
+hull        = cv2.convexHull(contours[0], returnPoints = False)
+convexity   = cv2.convexityDefects(contours, hull, cv.CreateMemStorage())
+
+drawPolygon(imb_contours, [(p[0, 0], p[0, 1]) for p in contours[0]], 255)
+drawPolygon(imb_contours, [(p[0, 0], p[0, 1]) for p in cv2.convexHull(contours[0])], 128)
+
+
+
 
 cv2.namedWindow("Reference")
 cv2.namedWindow("Debug")
+cv2.namedWindow("Contours")
 cv2.imshow("Reference", img_ref)
-cv2.imshow("Debug", img)
+cv2.imshow("Debug", imb)
+cv2.imshow("Contours", imb_contours)
 
 cv2.waitKey(0)

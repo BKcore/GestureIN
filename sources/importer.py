@@ -64,7 +64,13 @@ def detect_hand(image, file):
         cv.Line(wipC, last, first, (0, 255, 0))
 
         contours = cv.FindContours(wip8U, cv.CreateMemStorage())
-        hull     = cv.ConvexHull2(features, cv.CreateMemStorage())
+
+        while contours:
+            cv.DrawContours( wipC, contours, (255, 0, 0), (0, 0, 255), 1, 2 );
+
+            contours = contours.h_next()
+
+        # hull     = cv.ConvexHull2(features, cv.CreateMemStorage())
         # defects  = cv.ConvexityDefects(contour, hull, cv.CreateMemStorage())
 
         # for p in defects:
