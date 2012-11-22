@@ -54,15 +54,18 @@ defects     = cv2.convexityDefects(contours[0], hull)
 
 hull_points = [tuple(p[0]) for p in cv2.convexHull(contours[0], returnPoints=True)]
 
-for d in defects:
-	index = hull_points.index(tuple(contours[0][d[0][0]][0]))
-	value = tuple(contours[0][d[0][2]][0])
-
-	hull_points.insert(index, value)
-
 drawPolygon(imb_contours, [tuple(p[0]) for p in contours[0]], 255)
 drawPolygon(imb_contours, hull_points, 128, 2)
-# drawPoints(imb_contours, [tuple(contours[0][p[0][2]][0]) for p in defects], 128, 3)
+
+if defects != None:
+	for d in defects:
+		index = hull_points.index(tuple(contours[0][d[0][0]][0]))
+		value = tuple(contours[0][d[0][2]][0])
+
+		hull_points.insert(index, value)
+	
+	drawPoints(imb_contours, [tuple(contours[0][p[0][2]][0]) for p in defects], 128, 3)
+
 
 cv2.namedWindow("Reference")
 cv2.namedWindow("Debug")
