@@ -40,13 +40,17 @@ def drawPolygon(im, points, color):
 
 	cv2.line(im, last, first, color)
 
-img_ref 		 = loadSample(options.filename)
-imb 				 = extractBinary(img_ref)
-imb_contours = imb.copy()
+img_ref 		= loadSample(options.filename)
+imb 			= extractBinary(img_ref)
+imb_contours 	= imb.copy()
 
-contours, _ = cv2.findContours(imb_contours, cv.CV_RETR_LIST, cv.CV_CHAIN_APPROX_SIMPLE)
-hull        = cv2.convexHull(contours[0], returnPoints = False)
-convexity   = cv2.convexityDefects(contours, hull, cv.CreateMemStorage())
+contours, _ = cv2.findContours(imb_contours, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+cnt32f 		= contours[0].astype('float32')
+hull        = cv2.convexHull(cnt32f, returnPoints=False)
+hull32f		= hull.astype('float32')
+#													v Ici ça need du ndarray, mais je trouve pas le cv2.createMemStorage...
+convexity   = cv2.convexityDefects(cnt32f, hull32f, np.asarray(cv2.cv.CreateMemStorage()))
+
 
 drawPolygon(imb_contours, [(p[0, 0], p[0, 1]) for p in contours[0]], 255)
 drawPolygon(imb_contours, [(p[0, 0], p[0, 1]) for p in cv2.convexHull(contours[0])], 128)
