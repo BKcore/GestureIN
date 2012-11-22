@@ -44,17 +44,37 @@ def drawPoints(im, points, color, radius = 2):
 	for p in points:
 		cv2.circle(im, p, radius, color)
 
-img_ref 		 = loadSample(options.filename)
-imb 				 = extractBinary(img_ref)
+def bestContourAsInt(contours, minArea = -1):
+	maxArea = -1
+	contour = None
+
+	for cnt in contours:
+		cnt_int = cnt.astype('int')
+		area = cv2.contourArea(cnt_int)
+		if(area > maxArea and area > minArea):
+			contour = cnt_int
+			maxArea = area
+
+	return contour
+
+img_ref			 = loadSample(options.filename)
+imb				   = extractBinary(img_ref)
 imb_contours = imb.copy()
 
 contours, _ = cv2.findContours(imb_contours, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-hull        = cv2.convexHull(contours[0], returnPoints=False)
-defects     = cv2.convexityDefects(contours[0], hull)
+contour 	  = bestContourAsInt(contours)
+hull        = cv2.convexHull(contour, returnPoints=False).astype('int')
+defects     = cv2.convexityDefects(contour, hull)
 
-hull_points = [tuple(p[0]) for p in cv2.convexHull(contours[0], returnPoints=True)]
+hull_points = [tuple(p[0]) for p in cv2.convexHull(contour, returnPoints=True)]
 
-drawPolygon(imb_contours, [tuple(p[0]) for p in contours[0]], 255)
+for d in defects:
+	index = hull_points.index(tuple(contour[d[0][0]][0]))
+	value = tuple(contour[d[0][2]][0])
+
+	hull_points.insert(index, value)
+
+drawPolygon(imb_contours, [tuple(p[0]) for p in contour], 255)
 drawPolygon(imb_contours, hull_points, 128, 2)
 
 if defects != None:
