@@ -55,6 +55,7 @@ def bestContourAsInt(contours, minArea = -1):
 			contour = cnt_int
 			maxArea = area
 
+	print contour
 	return contour
 
 
@@ -66,6 +67,7 @@ imb_contours 	= imb.copy()
 
 contours, _ = cv2.findContours(imb_contours, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 contour 	= bestContourAsInt(contours)
+
 hull        = cv2.convexHull(contour, returnPoints=False).astype('int')
 defects     = cv2.convexityDefects(contour, hull)
 
@@ -79,7 +81,7 @@ for d in defects:
 
 drawPolygon(imb_contours, [tuple(p[0]) for p in contour], 255)
 drawPolygon(imb_contours, hull_points, 128, 2)
-# drawPoints(imb_contours, [tuple(contours[0][p[0][2]][0]) for p in defects], 128, 3)
+drawPoints(imb_contours, [tuple(contour[p[0][2]][0]) for p in defects], 128, 3)
 
 cv2.namedWindow("Reference")
 cv2.namedWindow("Debug")
