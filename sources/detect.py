@@ -24,7 +24,7 @@ def extractBinary(img):
 	_, imb = cv2.threshold(img, 0.91*255, 255, cv2.THRESH_BINARY)
 	return imb
 
-def drawPolygon(im, points, color):
+def drawPolygon(im, points, color, thickness=1):
 	first = None
 	last  = None
 	prev  = None
@@ -33,32 +33,36 @@ def drawPolygon(im, points, color):
 		if first == None:
 			first = p
 		else:
-			cv2.line(im, prev, p, color)
+			cv2.line(im, prev, p, color, thickness)
 
 		prev = p
 		last = p
 
-	cv2.line(im, last, first, color)
+	cv2.line(im, last, first, color, thickness)
 
 def drawPoints(im, points, color, radius = 2):
 	for p in points:
 		cv2.circle(im, p, radius, color)
 
-img_ref 		= loadSample(options.filename)
-imb 			= extractBinary(img_ref)
-imb_contours 	= imb.copy()
+img_ref 		 = loadSample(options.filename)
+imb 				 = extractBinary(img_ref)
+imb_contours = imb.copy()
 
 contours, _ = cv2.findContours(imb_contours, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-# cnt32f 		= contours[0].astype('float32')
 hull        = cv2.convexHull(contours[0], returnPoints=False)
-# hull32f		= hull.astype('float32')
-# Ici ca need du ndarray, mais je trouve pas le cv2.createMemStorage...
 defects     = cv2.convexityDefects(contours[0], hull)
 
+hull_points = [tuple(p[0]) for p in cv2.convexHull(contours[0], returnPoints=True)]
 
-drawPolygon(imb_contours, [(p[0, 0], p[0, 1]) for p in contours[0]], 255)
-drawPolygon(imb_contours, [(p[0, 0], p[0, 1]) for p in cv2.convexHull(contours[0])], 128)
-drawPoints(imb_contours, [tuple(contours[0][p[0][2]][0]) for p in defects], 128, 3)
+for d in defects:
+	index = hull_points.index(tuple(contours[0][d[0][0]][0]))
+	value = tuple(contours[0][d[0][2]][0])
+
+	hull_points.insert(index, value)
+
+drawPolygon(imb_contours, [tuple(p[0]) for p in contours[0]], 255)
+drawPolygon(imb_contours, hull_points, 128, 2)
+# drawPoints(imb_contours, [tuple(contours[0][p[0][2]][0]) for p in defects], 128, 3)
 
 cv2.namedWindow("Reference")
 cv2.namedWindow("Debug")
