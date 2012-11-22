@@ -55,6 +55,7 @@ def bestContourAsInt(contours, minArea = -1):
 			contour = cnt_int
 			maxArea = area
 
+	print contour
 	return contour
 
 img_ref			 = loadSample(options.filename)
@@ -85,7 +86,6 @@ if defects != None:
 		hull_points.insert(index, value)
 	
 	drawPoints(imb_contours, [tuple(contours[0][p[0][2]][0]) for p in defects], 128, 3)
-
 
 cv2.namedWindow("Reference")
 cv2.namedWindow("Debug")
