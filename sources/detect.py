@@ -20,11 +20,12 @@ def extractBinary(img):
 	img = cv2.equalizeHist(img)
 	img = cv2.erode(img, element)
 	img = cv2.medianBlur(img, 3)
-	#img = cv2.dilate(img, element)
+	img = cv2.dilate(img, element)
 	_, imb = cv2.threshold(img, 0.91*255, 255, cv2.THRESH_BINARY)
 	return imb
 
 def drawPolygon(im, points, color, thickness=1):
+
 	first = None
 	last  = None
 	prev  = None
@@ -42,7 +43,7 @@ def drawPolygon(im, points, color, thickness=1):
 
 def drawPoints(im, points, color, radius = 2):
 	for p in points:
-		cv2.circle(im, p, radius, color)
+		cv2.circle(im, p, radius, color, -1)
 
 def bestContourAsInt(contours, minArea = -1):
 	maxArea = -1
@@ -55,43 +56,53 @@ def bestContourAsInt(contours, minArea = -1):
 			contour = cnt_int
 			maxArea = area
 
-	print contour
 	return contour
 
-img_ref			 = loadSample(options.filename)
-imb				   = extractBinary(img_ref)
-imb_contours = imb.copy()
+def refineHullDefects(hull, defects, contour):
+	hull_refined = list(hull)
+
+	for d in defects:
+		index = hull.index(tuple(contour[d[0][0]][0]))
+		value = tuple(contour[d[0][2]][0])
+
+		hull_refined.insert(index, value)
+
+	return hull_refined
+
+def drawResult(im, hull, defects, shape):
+	imc = cv2.cvtColor(im, cv2.COLOR_GRAY2RGB)
+
+	drawPolygon(imc, hull, (0, 255, 255), 2)
+	drawPolygon(imc, shape, (0, 255, 0), 2)
+	drawPoints(imc, defects, (255, 0, 0), 4)
+
+	return imc
+	
+
+img_ref			= loadSample(options.filename)
+imb				= extractBinary(img_ref)
+imb_contours 	= imb.copy()
 
 contours, _ = cv2.findContours(imb_contours, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-contour 	  = bestContourAsInt(contours)
+contour 	= bestContourAsInt(contours)
 hull        = cv2.convexHull(contour, returnPoints=False).astype('int')
 defects     = cv2.convexityDefects(contour, hull)
 
-hull_points = [tuple(p[0]) for p in cv2.convexHull(contour, returnPoints=True)]
+hull_points 	= [tuple(p[0]) for p in cv2.convexHull(contour, returnPoints=True)]
+contour_points 	= [tuple(p[0]) for p in contour]
+defects_points 	= [tuple(contour[p[0][2]][0]) for p in defects] if defects != None else []
+hull_refined	= refineHullDefects(hull_points, defects, contour)
 
-for d in defects:
-	index = hull_points.index(tuple(contour[d[0][0]][0]))
-	value = tuple(contour[d[0][2]][0])
+# Debug
+drawPolygon(imb_contours, contour_points, 255)
+drawPolygon(imb_contours, hull_refined, 128, 2)
+drawPoints(imb_contours, defects_points, 128, 3)
 
-	hull_points.insert(index, value)
+img_result = drawResult(img_ref, hull_points, defects_points, hull_refined)
 
-drawPolygon(imb_contours, [tuple(p[0]) for p in contour], 255)
-drawPolygon(imb_contours, hull_points, 128, 2)
-
-if defects != None:
-	for d in defects:
-		index = hull_points.index(tuple(contours[0][d[0][0]][0]))
-		value = tuple(contours[0][d[0][2]][0])
-
-		hull_points.insert(index, value)
-	
-	drawPoints(imb_contours, [tuple(contours[0][p[0][2]][0]) for p in defects], 128, 3)
-
-cv2.namedWindow("Reference")
 cv2.namedWindow("Debug")
-cv2.namedWindow("Contours")
-cv2.imshow("Reference", img_ref)
-cv2.imshow("Debug", imb)
-cv2.imshow("Contours", imb_contours)
+cv2.namedWindow("Result")
+cv2.imshow("Debug", imb_contours)
+cv2.imshow("Result", img_result)
 
 cv2.waitKey(0)
