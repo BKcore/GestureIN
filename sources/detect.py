@@ -3,6 +3,7 @@
 import cv
 import cv2
 import numpy as np
+import copy
 from optparse import OptionParser
 
 parser = OptionParser()
@@ -45,6 +46,10 @@ def drawPoints(im, points, color, radius = 2):
 	for p in points:
 		cv2.circle(im, p, radius, color, -1)
 
+def drawOrientation(im, ellipse, color, thickness):
+	e = ellipse
+	cv2.ellipse(im, (e[0], (0, e[1][1]), e[2]), color, thickness)
+
 def bestContourAsInt(contours, minArea = -1):
 	maxArea = -1
 	contour = None
@@ -72,14 +77,20 @@ def refineHullDefects(hull, defects, contour, thresh):
 
 	return hull_refined, defects_points
 
-def drawResult(im, hull, defects, shape):
+def drawResult(im, features):#hull, defects, shape):
 	imc = cv2.cvtColor(im, cv2.COLOR_GRAY2RGB)
 
-	drawPolygon(imc, hull, (0, 255, 255), 2)
-	drawPolygon(imc, shape, (0, 255, 0), 2)
-	drawPoints(imc, defects, (255, 0, 0), 4)
-
+	drawPolygon(imc, features.get('hull'), (0, 255, 255), 2)
+	drawPolygon(imc, features.get('shape'), (0, 255, 0), 2)
+	drawPoints(imc, features.get('defects'), (255, 0, 0), 4)
+	drawOrientation(imc, features.get('boundingellipse'), (0, 0, 255), 1)
+	
 	return imc
+
+def packFeatures(contour, hull, defects, shape):
+	ellipse = cv2.fitEllipse(contour)
+
+	return {'contour': contour, 'hull': hull, 'defects': defects, 'shape': shape, 'boundingellipse': ellipse, 'angle': ellipse[2]}
 	
 
 img_ref				= loadSample(options.filename)
@@ -96,12 +107,14 @@ contour_points 	= [tuple(p[0]) for p in contour]
 
 hull_refined, defects_points = refineHullDefects(hull_points, defects, contour, 2500)
 
+features = packFeatures(contour, hull_points, defects_points, hull_refined)
+
 # Debug
 drawPolygon(imb_contours, contour_points, 255)
 drawPolygon(imb_contours, hull_refined, 128, 2)
 drawPoints(imb_contours, defects_points, 128, 3)
 
-img_result = drawResult(img_ref, hull_points, defects_points, hull_refined)
+img_result = drawResult(img_ref, features)
 
 cv2.namedWindow("Debug")
 cv2.namedWindow("Result")
