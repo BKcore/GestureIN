@@ -21,7 +21,7 @@ def extractBinary(img):
 	img = cv2.erode(img, element)
 	img = cv2.medianBlur(img, 3)
 	img = cv2.dilate(img, element)
-	_, imb = cv2.threshold(img, 0.91*255, 255, cv2.THRESH_BINARY)
+	_, imb = cv2.threshold(img, 0.92*255, 255, cv2.THRESH_BINARY)
 	return imb
 
 def drawPolygon(im, points, color, thickness=1):
@@ -58,16 +58,19 @@ def bestContourAsInt(contours, minArea = -1):
 
 	return contour
 
-def refineHullDefects(hull, defects, contour):
+def refineHullDefects(hull, defects, contour, thresh):
 	hull_refined = list(hull)
+	defects_points = list()
 
 	for d in defects:
 		index = hull.index(tuple(contour[d[0][0]][0]))
 		value = tuple(contour[d[0][2]][0])
+		print d[0][3]
+		if(d[0][3] > thresh):
+			hull_refined.insert(index, value)
+			defects_points.append(value)
 
-		hull_refined.insert(index, value)
-
-	return hull_refined
+	return hull_refined, defects_points
 
 def drawResult(im, hull, defects, shape):
 	imc = cv2.cvtColor(im, cv2.COLOR_GRAY2RGB)
@@ -79,19 +82,19 @@ def drawResult(im, hull, defects, shape):
 	return imc
 	
 
-img_ref			= loadSample(options.filename)
-imb				= extractBinary(img_ref)
+img_ref				= loadSample(options.filename)
+imb						= extractBinary(img_ref)
 imb_contours 	= imb.copy()
 
 contours, _ = cv2.findContours(imb_contours, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-contour 	= bestContourAsInt(contours)
+contour 		= bestContourAsInt(contours)
 hull        = cv2.convexHull(contour, returnPoints=False).astype('int')
 defects     = cv2.convexityDefects(contour, hull)
 
-hull_points 	= [tuple(p[0]) for p in cv2.convexHull(contour, returnPoints=True)]
+hull_points 		= [tuple(p[0]) for p in cv2.convexHull(contour, returnPoints=True)]
 contour_points 	= [tuple(p[0]) for p in contour]
-defects_points 	= [tuple(contour[p[0][2]][0]) for p in defects] if defects != None else []
-hull_refined	= refineHullDefects(hull_points, defects, contour)
+
+hull_refined, defects_points = refineHullDefects(hull_points, defects, contour, 2500)
 
 # Debug
 drawPolygon(imb_contours, contour_points, 255)
