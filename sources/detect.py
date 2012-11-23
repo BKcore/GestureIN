@@ -70,14 +70,14 @@ def refineHullDefects(hull, defects, contour, thresh):
 	for d in defects:
 		index = hull.index(tuple(contour[d[0][0]][0]))
 		value = tuple(contour[d[0][2]][0])
-		print d[0][3]
+		
 		if(d[0][3] > thresh):
 			hull_refined.insert(index, value)
 			defects_points.append(value)
 
 	return hull_refined, defects_points
 
-def drawResult(im, features):#hull, defects, shape):
+def drawResult(im, features):
 	imc = cv2.cvtColor(im, cv2.COLOR_GRAY2RGB)
 
 	drawPolygon(imc, features.get('hull'), (0, 255, 255), 2)
@@ -91,34 +91,39 @@ def packFeatures(contour, hull, defects, shape):
 	ellipse = cv2.fitEllipse(contour)
 
 	return {'contour': contour, 'hull': hull, 'defects': defects, 'shape': shape, 'boundingellipse': ellipse, 'angle': ellipse[2]}
-	
 
-img_ref				= loadSample(options.filename)
-imb						= extractBinary(img_ref)
-imb_contours 	= imb.copy()
+def loadAndProcess(file):
+	img_ref				= loadSample(file)
+	imb						= extractBinary(img_ref)
+	imb_contours 	= imb.copy()
 
-contours, _ = cv2.findContours(imb_contours, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-contour 		= bestContourAsInt(contours)
-hull        = cv2.convexHull(contour, returnPoints=False).astype('int')
-defects     = cv2.convexityDefects(contour, hull)
+	contours, _ = cv2.findContours(imb_contours, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+	contour 		= bestContourAsInt(contours)
+	hull        = cv2.convexHull(contour, returnPoints=False).astype('int')
+	defects     = cv2.convexityDefects(contour, hull)
 
-hull_points 		= [tuple(p[0]) for p in cv2.convexHull(contour, returnPoints=True)]
-contour_points 	= [tuple(p[0]) for p in contour]
+	hull_points 		= [tuple(p[0]) for p in cv2.convexHull(contour, returnPoints=True)]
+	contour_points 	= [tuple(p[0]) for p in contour]
 
-hull_refined, defects_points = refineHullDefects(hull_points, defects, contour, 2500)
+	hull_refined, defects_points = refineHullDefects(hull_points, defects, contour, 2500)
 
-features = packFeatures(contour, hull_points, defects_points, hull_refined)
+	features = packFeatures(contour, hull_points, defects_points, hull_refined)
 
-# Debug
-drawPolygon(imb_contours, contour_points, 255)
-drawPolygon(imb_contours, hull_refined, 128, 2)
-drawPoints(imb_contours, defects_points, 128, 3)
+	# Debug
+	drawPolygon(imb_contours, contour_points, 255)
+	drawPolygon(imb_contours, hull_refined, 128, 2)
+	drawPoints(imb_contours, defects_points, 128, 3)
 
-img_result = drawResult(img_ref, features)
+	img_result = drawResult(img_ref, features)
+
+	return img_result, imb_contours
 
 cv2.namedWindow("Debug")
 cv2.namedWindow("Result")
-cv2.imshow("Debug", imb_contours)
+
+img_result, img_debug = loadAndProcess(options.filename)
+
+cv2.imshow("Debug", img_debug)
 cv2.imshow("Result", img_result)
 
 cv2.waitKey(0)
