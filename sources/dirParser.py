@@ -6,11 +6,8 @@ import numpy as np
 from optparse import OptionParser
 import os.path
 import Tkinter as tk
+from PIL import Image, ImageTk
 
-
-parser = OptionParser()
-parser.add_option("-d", "--directory", dest="dirname", help="Directory to parse", metavar="DIR")
-(options, args) = parser.parse_args()
 
 def listdirectory(path): 
     fichier = [] 
@@ -21,20 +18,51 @@ def listdirectory(path):
     
     return fichier
 
+
+def setImage(side): 
+    global currentIm
+    global files
+    global im
+    global tkroot
+    global tkimage
+    global window
+
+    if(side == 1):
+        currentIm = currentIm +1
+
+    elif(side== 0):
+        currentIm = currentIm -1
+
+    im = Image.open(files[currentIm])
+    tkimage = ImageTk.PhotoImage(im)
+    window.config(image = tkimage)
+    window.pack()
+
+
 def onKeyPress(event): 
     if(event.keysym == 'Right'):
-    	print "right arrow"
+    	setImage(1)
+        
     elif(event.keysym == 'Left'):
-    	print "left arrow"
+    	setImage(0)
     else:
     	print event.keysym
 
+if __name__ == '__main__' :
+    parser = OptionParser()
+    parser.add_option("-d", "--directory", dest="dirname", help="Directory to parse", metavar="DIR")
+    (options, args) = parser.parse_args()
 
-files = listdirectory(options.dirname)
-#print files
+    files = listdirectory(options.dirname)
 
-tkroot = tk.Tk()
-tkroot.bind('<KeyPress>',  onKeyPress)             
-tkroot.focus()                                     
-tkroot.title('Click Me')
-tkroot.mainloop()
+    currentIm = 0
+    tkroot = tk.Tk()
+    im = Image.open(files[currentIm])
+    tkimage = ImageTk.PhotoImage(im)
+    window = tk.Label(tkroot, image=tkimage)
+    window.pack()
+    tkroot.bind('<KeyPress>',  onKeyPress )           
+    tkroot.focus()                                     
+    tkroot.title('Viewer')
+    tkroot.mainloop()
+
