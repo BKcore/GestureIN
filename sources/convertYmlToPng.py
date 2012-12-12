@@ -5,10 +5,18 @@ import cv2
 import numpy as np
 from optparse import OptionParser
 import os.path
+import sys
 
 parser = OptionParser()
 parser.add_option("-d", "--directory", dest="dirname", help="Directory to parse", metavar="DIR")
+parser.add_option("-o", "--output", dest="output", help="Directory to output", metavar="DIRO")
+parser.add_option("-x", "--xform",
+                      action="store_true",
+                      dest="xform_flag",
+                      default=False,
+                      help="bla")
 (options, args) = parser.parse_args()
+
 
 def listdirectory(path): 
     fichier = [] 
@@ -28,4 +36,9 @@ for f in files:
 
 	i += 1
 
-	cv2.imwrite(options.dirname + "/img/" + str(i) + ".png", im)
+	if (options.xform_flag == True):
+		x,y = (im >= 255).nonzero()
+		im[x,y] = 0
+
+
+	cv2.imwrite(options.output + "/" + str(i) + ".png", im)
