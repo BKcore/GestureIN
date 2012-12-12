@@ -6,15 +6,16 @@ import numpy as np
 import copy
 from optparse import OptionParser
 
-parser = OptionParser()
-parser.add_option("-f", "--file", dest="filename", help="File to import", metavar="FILE")
-parser.add_option("-m", "--mode", dest="mode", help="Detection mode (if cdt)", metavar="MODE")
-(options, args) = parser.parse_args()
 
-def loadSample(file):
+def loadRawSample(file):
 	im = np.asarray(cv.Load(file))
 	im = 255-(im/np.max(im)*255).astype('uint8')
 	return im
+
+def loadSample(file):
+	im = cv2.imread(file)
+	img = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY).astype('uint8')
+	return img
 
 def extractBinary(img):
 	element = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
@@ -93,7 +94,10 @@ def packFeatures(contour, hull, defects, shape):
 	return {'contour': contour, 'hull': hull, 'defects': defects, 'shape': shape, 'boundingellipse': ellipse, 'angle': ellipse[2]}
 
 def loadAndProcess(file):
-	img_ref				= loadSample(file)
+	return process(loadSample(file))
+
+def process(file):
+	img_ref				= file
 	imb						= extractBinary(img_ref)
 	imb_contours 	= imb.copy()
 
@@ -118,12 +122,21 @@ def loadAndProcess(file):
 
 	return img_result, imb_contours
 
-cv2.namedWindow("Debug")
-cv2.namedWindow("Result")
 
-img_result, img_debug = loadAndProcess(options.filename)
+if __name__ == '__main__' :
 
-cv2.imshow("Debug", img_debug)
-cv2.imshow("Result", img_result)
+	parser = OptionParser()
+	parser.add_option("-f", "--file", dest="filename", help="File to import", metavar="FILE")
+	parser.add_option("-m", "--mode", dest="mode", help="Detection mode (if cdt)", metavar="MODE")
+	(options, args) = parser.parse_args()
 
-cv2.waitKey(0)
+
+	cv2.namedWindow("Debug")
+	cv2.namedWindow("Result")
+
+	img_result, img_debug = process(loadSample(options.filename))
+
+	cv2.imshow("Debug", img_debug)
+	cv2.imshow("Result", img_result)
+
+	cv2.waitKey(0)
