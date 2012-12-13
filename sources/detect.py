@@ -119,8 +119,10 @@ def process(file):
 	drawPoints(imb_contours, defects_points, 128, 3)
 
 	img_result = drawResult(img_ref, features)
-
-	return img_result, imb_contours
+	
+	test = cv2.cvtColor(imb,cv2.COLOR_GRAY2BGR)
+	
+	return img_result, test
 
 
 if __name__ == '__main__' :

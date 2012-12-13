@@ -24,7 +24,8 @@ def listdirectory(path):
     for root, dirs, files in os.walk(path): 
         for i in files: 
             fichier.append(os.path.join(root, i)) 
-    
+
+    fichier.sort(key=lambda x: os.path.basename(x).split('.')[0].zfill(5))
     return fichier
 
 files 	= listdirectory(options.dirname)
@@ -40,5 +41,4 @@ for f in files:
 		x,y = (im >= 255).nonzero()
 		im[x,y] = 0
 
-
-	cv2.imwrite(options.output + "/" + str(i) + ".png", im)
+	cv2.imwrite(options.output + "/" + os.path.basename(f).split('.')[0].zfill(5) + ".png", im)
