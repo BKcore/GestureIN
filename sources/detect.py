@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-import cv
 import cv2
 import numpy as np
 import copy
@@ -12,7 +11,7 @@ parser.add_option("-m", "--mode", dest="mode", help="Detection mode (if cdt)", m
 (options, args) = parser.parse_args()
 
 def loadSample(file):
-	im = np.asarray(cv.Load(file))
+	im = np.asarray(cv2.cv.Load(file))
 	im = 255-(im/np.max(im)*255).astype('uint8')
 	return im
 

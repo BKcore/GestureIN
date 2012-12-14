@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-import cv
 import cv2
 import numpy as np
 from optparse import OptionParser
