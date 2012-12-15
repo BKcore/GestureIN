@@ -25,14 +25,12 @@ def extractBinary(img):
 
   if thresh is not None:
     _, imb = cv2.threshold(img, thresh, 255, cv2.THRESH_BINARY)
-    print "VALLEY THRESH"
   else:
     _, imb = cv2.threshold(img,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-    print "OTSU THRESH"
 
   imb = cv2.erode(imb, element)
-  imb = cv2.medianBlur(imb, 3)
-  imb = cv2.dilate(imb, element)
+  #imb = cv2.medianBlur(imb, 3)
+  #imb = cv2.dilate(imb, element)
   return imb
 
 def drawPolygon(im, points, color, thickness=1):
@@ -100,7 +98,14 @@ def drawResult(im, features):
 def packFeatures(contour, hull, defects, shape):
   ellipse = cv2.fitEllipse(contour)
 
-  return {'contour': contour, 'hull': hull, 'defects': defects, 'shape': shape, 'boundingellipse': ellipse, 'angle': ellipse[2]}
+  M = cv2.moments(contour)
+  centroid_x = int(M['m10']/M['m00'])
+  centroid_y = int(M['m01']/M['m00'])
+  center = (centroid_x, centroid_y)
+
+
+  return {'contour': contour, 'hull': hull, 'defects_nb': len(defects), 'defects': defects, 'shape': shape, 'boundingellipse': ellipse, 'angle': ellipse[2], 'centroid': center}
+
 
 def loadAndProcess(file):
   return process(loadSample(file))
@@ -109,6 +114,7 @@ def process(file):
   img_ref       = file
   imb           = extractBinary(img_ref)
   imb_contours  = imb.copy()
+  vect          = None
 
   contours, _ = cv2.findContours(imb_contours, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
