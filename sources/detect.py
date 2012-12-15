@@ -20,10 +20,19 @@ def loadSample(file):
 def extractBinary(img):
   element = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
   #img = cv2.equalizeHist(img)
-  img = cv2.erode(img, element)
-  img = cv2.medianBlur(img, 3)
-  img = cv2.dilate(img, element)
-  _, imb = cv2.threshold(img, findThresh(smoothHist(img)), 255, cv2.THRESH_BINARY)
+  #
+  thresh = findThresh(smoothHist(img))
+
+  if thresh is not None:
+    _, imb = cv2.threshold(img, thresh, 255, cv2.THRESH_BINARY)
+    print "VALLEY THRESH"
+  else:
+    _, imb = cv2.threshold(img,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    print "OTSU THRESH"
+
+  imb = cv2.erode(imb, element)
+  imb = cv2.medianBlur(imb, 3)
+  imb = cv2.dilate(imb, element)
   return imb
 
 def drawPolygon(im, points, color, thickness=1):
@@ -102,23 +111,28 @@ def process(file):
   imb_contours  = imb.copy()
 
   contours, _ = cv2.findContours(imb_contours, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-  contour     = bestContourAsInt(contours)
-  hull        = cv2.convexHull(contour, returnPoints=False).astype('int')
-  defects     = cv2.convexityDefects(contour, hull)
 
-  hull_points     = [tuple(p[0]) for p in cv2.convexHull(contour, returnPoints=True)]
-  contour_points  = [tuple(p[0]) for p in contour]
+  if contours:
+    contour     = bestContourAsInt(contours)
+    hull        = cv2.convexHull(contour, returnPoints=False).astype('int')
+    defects     = cv2.convexityDefects(contour, hull)
 
-  hull_refined, defects_points = refineHullDefects(hull_points, defects, contour, 2500)
+    hull_points     = [tuple(p[0]) for p in cv2.convexHull(contour, returnPoints=True)]
+    contour_points  = [tuple(p[0]) for p in contour]
 
-  features = packFeatures(contour, hull_points, defects_points, hull_refined)
+    hull_refined, defects_points = refineHullDefects(hull_points, defects, contour, 2500)
 
-  # Debug
-  drawPolygon(imb_contours, contour_points, 255)
-  drawPolygon(imb_contours, hull_refined, 128, 2)
-  drawPoints(imb_contours, defects_points, 128, 3)
+    features = packFeatures(contour, hull_points, defects_points, hull_refined)
 
-  img_result = drawResult(img_ref, features)
+    # Debug
+    drawPolygon(imb_contours, contour_points, 255)
+    drawPolygon(imb_contours, hull_refined, 128, 2)
+    drawPoints(imb_contours, defects_points, 128, 3)
+
+    img_result = drawResult(img_ref, features)
+
+  else:
+    img_result = cv2.cvtColor(img_ref,cv2.COLOR_GRAY2BGR)
   
   test = cv2.cvtColor(imb,cv2.COLOR_GRAY2BGR)
   
@@ -129,27 +143,30 @@ def smoothHist(im):
   cv2.normalize(hist_item,hist_item,0,255,cv2.NORM_MINMAX)
   hist=np.int32(np.around(hist_item))
 
-  data = [x[0] for x in hist]
-  b = 1/7.
-  data = np.convolve([b,b,b,b,b,b,b], data, 'same').astype('uint8')
-  data = np.convolve([b,b,b,b,b,b,b], data, 'same').astype('uint8')
+  data = [int(x[0]) for x in hist]
+  b = 1/5.
+  data = np.convolve([b,b,b,b,b], data, 'same').astype('uint8')
+  data = np.convolve([b,b,b,b,b], data, 'same').astype('uint8')
 
   return data
 
 def findThresh(a):
-  valleys = []
+  peaks = []
   last = -999
-  default = 0.92*255
+  default = None
 
   if len(a) < 3:
     return default
 
-  for i in range(2, len(a-2)):
-    if(a[i] < a[i-2] and a[i] < a[i+2] and i-last > 4 ):
+  for i in range(3, len(a)-3):
+    if(a[i] > a[i-3] and a[i] > a[i+3] and i-last > 4 ):
       last = i
-      valleys.append(i)
+      peaks.append(i)
 
-  return valleys[-1] if len(valleys) > 0 else default
+  if len(peaks) > 1:
+    return int(peaks[-2] + (peaks[-1] - peaks[-2])/2)
+  else:
+    return default
 
 def debugThresh(im):
   cv2.namedWindow("dt")
@@ -165,7 +182,9 @@ def debugThresh(im):
 
   thresh = findThresh(data)
 
-  drawPoints(h, [(thresh, 300-data[thresh])], (0,0,255))
+  if thresh is not None:
+    print thresh, data[thresh]
+    drawPoints(h, [(int(thresh), int(300-data[thresh]))], (0,0,255))
 
   cv2.imshow("dt", h)
 
