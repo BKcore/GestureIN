@@ -116,7 +116,6 @@ class Viewer (QObject):
         with io.open( self.currentDir + 'dictionnary.txt', 'wb') as outfile:
             json.dump(self.dictionary, outfile)
 
-        self.emit(SIGNAL("quit()"))
 
 
 if __name__ == '__main__' :
@@ -143,6 +142,7 @@ if __name__ == '__main__' :
     playButton = QPushButton("Play",window)
     previous = QPushButton("",window)
     next = QPushButton("",window)
+    saveButton = QPushButton("Save",window)
 
     choice1 = QPushButton("0",window)
     choice2 = QPushButton("1", window)
@@ -157,6 +157,7 @@ if __name__ == '__main__' :
     next.setIcon(QIcon.fromTheme("go-next"))
     exitButton.setIcon(QIcon.fromTheme("application-exit"))
     playButton.setIcon(QIcon.fromTheme("media-playback-start"))
+    saveButton.setIcon(QIcon.fromTheme("document-save"))
 
     nameLayout.addWidget(v.fileName)
     nameLayout.addWidget(v.fileClass)
@@ -168,6 +169,7 @@ if __name__ == '__main__' :
     hLayout.addWidget(next)
 
     buttonLayout.addWidget(playButton)
+    buttonLayout.addWidget(saveButton)
     buttonLayout.addWidget(exitButton)
 
     choiceLayout.addWidget(choice1)
@@ -196,8 +198,9 @@ if __name__ == '__main__' :
     QObject.connect(choice6,SIGNAL("clicked()"),v.choice6)
     QObject.connect(choice7,SIGNAL("clicked()"),v.choice7)
     QObject.connect(playButton,SIGNAL("clicked()"),v.play)
-    QObject.connect(exitButton,SIGNAL("clicked()"),v.saveDic)
-    QObject.connect(v,SIGNAL("quit()"),app.exit)
+    QObject.connect(saveButton,SIGNAL("clicked()"),v.saveDic)
+    QObject.connect(exitButton,SIGNAL("clicked()"),app.exit)
+    
      
     window.show()
     sys.exit(app.exec_())
