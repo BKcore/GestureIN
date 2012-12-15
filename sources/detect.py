@@ -8,137 +8,209 @@ from optparse import OptionParser
 
 
 def loadRawSample(file):
-	im = np.asarray(cv.Load(file))
-	im = 255-(im/np.max(im)*255).astype('uint8')
-	return im
+  im = np.asarray(cv.Load(file))
+  im = 255-(im/np.max(im)*255).astype('uint8')
+  return im
 
 def loadSample(file):
-	im = cv2.imread(file)
-	img = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY).astype('uint8')
-	return img
+  im = cv2.imread(file)
+  img = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY).astype('uint8')
+  return img
 
 def extractBinary(img):
-	element = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
-	img = cv2.equalizeHist(img)
-	img = cv2.erode(img, element)
-	img = cv2.medianBlur(img, 3)
-	img = cv2.dilate(img, element)
-	_, imb = cv2.threshold(img, 0.92*255, 255, cv2.THRESH_BINARY)
-	return imb
+  element = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
+  #img = cv2.equalizeHist(img)
+  #
+  thresh = findThresh(smoothHist(img))
+
+  if thresh is not None:
+    _, imb = cv2.threshold(img, thresh, 255, cv2.THRESH_BINARY)
+  else:
+    _, imb = cv2.threshold(img,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+
+  imb = cv2.erode(imb, element)
+  #imb = cv2.medianBlur(imb, 3)
+  #imb = cv2.dilate(imb, element)
+  return imb
 
 def drawPolygon(im, points, color, thickness=1):
 
-	first = None
-	last  = None
-	prev  = None
+  first = None
+  last  = None
+  prev  = None
 
-	for p in points:
-		if first == None:
-			first = p
-		else:
-			cv2.line(im, prev, p, color, thickness)
+  for p in points:
+    if first == None:
+      first = p
+    else:
+      cv2.line(im, prev, p, color, thickness)
 
-		prev = p
-		last = p
+    prev = p
+    last = p
 
-	cv2.line(im, last, first, color, thickness)
+  cv2.line(im, last, first, color, thickness)
 
 def drawPoints(im, points, color, radius = 2):
-	for p in points:
-		cv2.circle(im, p, radius, color, -1)
+  for p in points:
+    cv2.circle(im, p, radius, color, -1)
 
 def drawOrientation(im, ellipse, color, thickness):
-	e = ellipse
-	cv2.ellipse(im, (e[0], (0, e[1][1]), e[2]), color, thickness)
+  e = ellipse
+  cv2.ellipse(im, (e[0], (0, e[1][1]), e[2]), color, thickness)
 
 def bestContourAsInt(contours, minArea = -1):
-	maxArea = -1
-	contour = None
+  maxArea = -1
+  contour = None
 
-	for cnt in contours:
-		cnt_int = cnt.astype('int')
-		area = cv2.contourArea(cnt_int)
-		if(area > maxArea and area > minArea):
-			contour = cnt_int
-			maxArea = area
+  for cnt in contours:
+    cnt_int = cnt.astype('int')
+    area = cv2.contourArea(cnt_int)
+    if(area > maxArea and area > minArea):
+      contour = cnt_int
+      maxArea = area
 
-	return contour
+  return contour
 
 def refineHullDefects(hull, defects, contour, thresh):
-	hull_refined = list(hull)
-	defects_points = list()
+  hull_refined = list(hull)
+  defects_points = list()
 
-	for d in defects:
-		index = hull.index(tuple(contour[d[0][0]][0]))
-		value = tuple(contour[d[0][2]][0])
-		
-		if(d[0][3] > thresh):
-			hull_refined.insert(index, value)
-			defects_points.append(value)
+  for d in defects:
+    index = hull.index(tuple(contour[d[0][0]][0]))
+    value = tuple(contour[d[0][2]][0])
+    
+    if(d[0][3] > thresh):
+      hull_refined.insert(index, value)
+      defects_points.append(value)
 
-	return hull_refined, defects_points
+  return hull_refined, defects_points
 
 def drawResult(im, features):
-	imc = cv2.cvtColor(im, cv2.COLOR_GRAY2RGB)
+  imc = cv2.cvtColor(im, cv2.COLOR_GRAY2RGB)
 
-	drawPolygon(imc, features.get('hull'), (0, 255, 255), 2)
-	drawPolygon(imc, features.get('shape'), (0, 255, 0), 2)
-	drawPoints(imc, features.get('defects'), (255, 0, 0), 4)
-	drawOrientation(imc, features.get('boundingellipse'), (0, 0, 255), 1)
-	
-	return imc
+  drawPolygon(imc, features.get('hull'), (0, 255, 255), 2)
+  drawPolygon(imc, features.get('shape'), (0, 255, 0), 2)
+  drawPoints(imc, features.get('defects'), (255, 0, 0), 4)
+  drawOrientation(imc, features.get('boundingellipse'), (0, 0, 255), 1)
+  
+  return imc
 
 def packFeatures(contour, hull, defects, shape):
-	ellipse = cv2.fitEllipse(contour)
+  ellipse = cv2.fitEllipse(contour)
 
-	return {'contour': contour, 'hull': hull, 'defects': defects, 'shape': shape, 'boundingellipse': ellipse, 'angle': ellipse[2]}
+  M = cv2.moments(contour)
+  centroid_x = int(M['m10']/M['m00'])
+  centroid_y = int(M['m01']/M['m00'])
+  center = (centroid_x, centroid_y)
+
+
+  return {'contour': contour, 'hull': hull, 'defects_nb': len(defects), 'defects': defects, 'shape': shape, 'boundingellipse': ellipse, 'angle': ellipse[2], 'centroid': center}
+
 
 def loadAndProcess(file):
-	return process(loadSample(file))
+  return process(loadSample(file))
 
 def process(file):
-	img_ref				= file
-	imb						= extractBinary(img_ref)
-	imb_contours 	= imb.copy()
+  img_ref       = file
+  imb           = extractBinary(img_ref)
+  imb_contours  = imb.copy()
+  vect          = None
 
-	contours, _ = cv2.findContours(imb_contours, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-	contour 		= bestContourAsInt(contours)
-	hull        = cv2.convexHull(contour, returnPoints=False).astype('int')
-	defects     = cv2.convexityDefects(contour, hull)
+  contours, _ = cv2.findContours(imb_contours, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-	hull_points 		= [tuple(p[0]) for p in cv2.convexHull(contour, returnPoints=True)]
-	contour_points 	= [tuple(p[0]) for p in contour]
+  if contours:
+    contour     = bestContourAsInt(contours)
+    hull        = cv2.convexHull(contour, returnPoints=False).astype('int')
+    defects     = cv2.convexityDefects(contour, hull)
 
-	hull_refined, defects_points = refineHullDefects(hull_points, defects, contour, 2500)
+    hull_points     = [tuple(p[0]) for p in cv2.convexHull(contour, returnPoints=True)]
+    contour_points  = [tuple(p[0]) for p in contour]
 
-	features = packFeatures(contour, hull_points, defects_points, hull_refined)
+    hull_refined, defects_points = refineHullDefects(hull_points, defects, contour, 2500)
 
-	# Debug
-	drawPolygon(imb_contours, contour_points, 255)
-	drawPolygon(imb_contours, hull_refined, 128, 2)
-	drawPoints(imb_contours, defects_points, 128, 3)
+    features = packFeatures(contour, hull_points, defects_points, hull_refined)
 
-	img_result = drawResult(img_ref, features)
-	
-	test = cv2.cvtColor(imb,cv2.COLOR_GRAY2BGR)
-	
-	return img_result, test
+    # Debug
+    drawPolygon(imb_contours, contour_points, 255)
+    drawPolygon(imb_contours, hull_refined, 128, 2)
+    drawPoints(imb_contours, defects_points, 128, 3)
+
+    img_result = drawResult(img_ref, features)
+
+  else:
+    img_result = cv2.cvtColor(img_ref,cv2.COLOR_GRAY2BGR)
+  
+  test = cv2.cvtColor(imb,cv2.COLOR_GRAY2BGR)
+  
+  return img_result, test
+
+def smoothHist(im):
+  hist_item = cv2.calcHist([im],[0],None,[256],[0,255])
+  cv2.normalize(hist_item,hist_item,0,255,cv2.NORM_MINMAX)
+  hist=np.int32(np.around(hist_item))
+
+  data = [int(x[0]) for x in hist]
+  b = 1/5.
+  data = np.convolve([b,b,b,b,b], data, 'same').astype('uint8')
+  data = np.convolve([b,b,b,b,b], data, 'same').astype('uint8')
+
+  return data
+
+def findThresh(a):
+  peaks = []
+  last = -999
+  default = None
+
+  if len(a) < 3:
+    return default
+
+  for i in range(3, len(a)-3):
+    if(a[i] > a[i-3] and a[i] > a[i+3] and i-last > 4 ):
+      last = i
+      peaks.append(i)
+
+  if len(peaks) > 1:
+    return int(peaks[-2] + (peaks[-1] - peaks[-2])/2)
+  else:
+    return default
+
+def debugThresh(im):
+  cv2.namedWindow("dt")
+  h = np.zeros((300,256,3))
+  bins = np.arange(256).reshape(256,1)
+  color = (255,0,0)
+
+  data = smoothHist(im)  
+
+  pts = np.column_stack((bins,data))
+  cv2.polylines(h,[pts],False,color)
+  h=np.flipud(h).astype('uint8')
+
+  thresh = findThresh(data)
+
+  if thresh is not None:
+    print thresh, data[thresh]
+    drawPoints(h, [(int(thresh), int(300-data[thresh]))], (0,0,255))
+
+  cv2.imshow("dt", h)
 
 
 if __name__ == '__main__' :
 
-	parser = OptionParser()
-	parser.add_option("-f", "--file", dest="filename", help="File to import", metavar="FILE")
-	parser.add_option("-m", "--mode", dest="mode", help="Detection mode (if cdt)", metavar="MODE")
-	(options, args) = parser.parse_args()
+  parser = OptionParser()
+  parser.add_option("-f", "--file", dest="filename", help="File to import", metavar="FILE")
+  parser.add_option("-m", "--mode", dest="mode", help="Detection mode (if cdt)", metavar="MODE")
+  (options, args) = parser.parse_args()
 
 
-	cv2.namedWindow("Debug")
-	cv2.namedWindow("Result")
+  cv2.namedWindow("Debug")
+  cv2.namedWindow("Result")
 
-	img_result, img_debug = process(loadSample(options.filename))
+  img_result, img_debug = process(loadSample(options.filename))
 
-	cv2.imshow("Debug", img_debug)
-	cv2.imshow("Result", img_result)
+  cv2.imshow("Debug", img_debug)
+  cv2.imshow("Result", img_result)
 
-	cv2.waitKey(0)
+  debugThresh(loadSample(options.filename))
+
+  cv2.waitKey(0)
