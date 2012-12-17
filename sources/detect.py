@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import copy
 from optparse import OptionParser
-
+import haar_detect_hand
 
 def loadRawSample(file):
   im = np.asarray(cv.Load(file))
@@ -18,19 +18,22 @@ def loadSample(file):
   return img
 
 def extractBinary(img):
-  element = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
+  element = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3,3))
   #img = cv2.equalizeHist(img)
-  #
+
+  # remove artefacts and noise
+  img = cv2.erode(img, element)
+  #img = cv2.dilate(img, element)
+
+  # renormalize
+  #img = ((img/np.max(img).astype('float'))*255).astype('uint8')
+
   thresh = findThresh(smoothHist(img))
 
   if thresh is not None:
     _, imb = cv2.threshold(img, thresh, 255, cv2.THRESH_BINARY)
   else:
     _, imb = cv2.threshold(img,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-
-  imb = cv2.erode(imb, element)
-  #imb = cv2.medianBlur(imb, 3)
-  #imb = cv2.dilate(imb, element)
   return imb
 
 def drawPolygon(im, points, color, thickness=1):
@@ -91,12 +94,15 @@ def drawResult(im, features):
   drawPolygon(imc, features.get('hull'), (0, 255, 255), 2)
   drawPolygon(imc, features.get('shape'), (0, 255, 0), 2)
   drawPoints(imc, features.get('defects'), (255, 0, 0), 4)
+  drawPoints(imc, [features.get('centroid')], (255, 0, 255), 6)
   drawOrientation(imc, features.get('boundingellipse'), (0, 0, 255), 1)
   
   return imc
 
-def packFeatures(contour, hull, defects, shape):
+def packFeatures(contour, hull, defects, shape, rect):
   ellipse = cv2.fitEllipse(contour)
+
+  #(x,y,w,h) = rect if rect is not None else (0,0,shape[1],shape[0])
 
   M = cv2.moments(contour)
   centroid_x = int(M['m10']/M['m00'])
@@ -104,17 +110,44 @@ def packFeatures(contour, hull, defects, shape):
   center = (centroid_x, centroid_y)
 
 
-  return {'contour': contour, 'hull': hull, 'defects_nb': len(defects), 'defects': defects, 'shape': shape, 'boundingellipse': ellipse, 'angle': ellipse[2], 'centroid': center}
+  return {'contour': contour, 'hull': hull, 'defects_nb': len(defects), 'defects': defects, 'shape': shape, 'boundingellipse': ellipse, 'angle': ellipse[2], 'centroid': center, 'rect': rect}
 
+def findROI(img):
+  hands = haar_detect_hand.detect_hands(img, '../samples/haar-training/haarcascade/cascade.xml')
+
+  maxi = 0
+  rect = None
+  for (x,y,w,h) in hands:
+    if(w*h > maxi):
+      maxi = w*h
+      rect = (x,y,w,h)
+
+  if rect is not None:
+    (x,y,w,h) = rect
+    imr = img[y:y+h, x:x+w]
+  else:
+    imr = img
+
+  cv2.namedWindow("ROI")
+  cv2.imshow("ROI", imr)
+  
+  return imr, rect
 
 def loadAndProcess(file):
   return process(loadSample(file))
 
 def process(file):
   img_ref       = file
-  imb           = extractBinary(img_ref)
+  img, rect     = findROI(img_ref)
+  imb           = extractBinary(img)
   imb_contours  = imb.copy()
   vect          = None
+  img_tr = np.copy(img_ref)
+
+  debugThresh(img)
+
+  if rect is None:
+    return img_ref, img_ref
 
   contours, _ = cv2.findContours(imb_contours, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -128,21 +161,24 @@ def process(file):
 
     hull_refined, defects_points = refineHullDefects(hull_points, defects, contour, 2500)
 
-    features = packFeatures(contour, hull_points, defects_points, hull_refined)
+    features = packFeatures(contour, hull_points, defects_points, hull_refined, rect)
 
-    # Debug
-    drawPolygon(imb_contours, contour_points, 255)
-    drawPolygon(imb_contours, hull_refined, 128, 2)
-    drawPoints(imb_contours, defects_points, 128, 3)
+    img = drawResult(img, features)
 
-    img_result = drawResult(img_ref, features)
+    img_ref = cv2.cvtColor(img_ref,cv2.COLOR_GRAY2BGR)
+        
+    (x,y,w,h) = rect
+    img_ref[y:y+h, x:x+w] = img
+    cv2.rectangle(img_ref, (x,y), (x+w,y+h), (255,0,0))
+    img_tr[y:y+h, x:x+w] = imb
 
   else:
-    img_result = cv2.cvtColor(img_ref,cv2.COLOR_GRAY2BGR)
+    img_ref = cv2.cvtColor(img_ref,cv2.COLOR_GRAY2BGR)
+    img_tr = imb
   
-  test = cv2.cvtColor(imb,cv2.COLOR_GRAY2BGR)
+  img_tr = cv2.cvtColor(img_tr,cv2.COLOR_GRAY2BGR)
   
-  return img_result, test
+  return img_ref, img_tr
 
 def smoothHist(im):
   hist_item = cv2.calcHist([im],[0],None,[256],[0,255])
@@ -189,7 +225,7 @@ def debugThresh(im):
   thresh = findThresh(data)
 
   if thresh is not None:
-    print thresh, data[thresh]
+    #print thresh, data[thresh]
     drawPoints(h, [(int(thresh), int(300-data[thresh]))], (0,0,255))
 
   cv2.imshow("dt", h)

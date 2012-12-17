@@ -72,15 +72,17 @@ class Viewer (QObject):
         self.original.setPixmap(QPixmap(self.fichier[ind]))
         img1,img2 = detect.loadAndProcess(self.fichier[ind])
 
-        hands = haar_classifier.detect_hands(cv2.imread(self.fichier[ind]), os.path.dirname(os.path.realpath(__file__)) + '/../samples/haar-training/haarcascade/cascade.xml')
-
-        for (x,y,w,h) in hands:
-            cv2.rectangle(img1, (x,y), (x+w,y+h), 255)
-
         width = img1.shape[1]
         height = img1.shape[0]
-        self.transform1.setPixmap(QPixmap.fromImage(QImage(img1.tostring(),width,height,QImage.Format_RGB888)))
-        self.transform2.setPixmap(QPixmap.fromImage(QImage(img2.tostring(),width,height,QImage.Format_RGB888)))
+
+        pix1 = QPixmap.fromImage(QImage(img1.tostring(),width,height,QImage.Format_RGB888))
+        pix2 = QPixmap.fromImage(QImage(img2.tostring(),width,height,QImage.Format_RGB888))
+
+        self.transform1.setPixmap(pix1)
+        self.transform1.setFixedSize(pix1.size())
+        self.transform2.setPixmap(pix2)
+        self.transform2.setFixedSize(pix2.size())
+
         self.fileName.setText(self.fichier[ind])
         if(self.fichier[ind] in self.dictionary):
             self.fileClass.setText(str(self.dictionary[self.fichier[ind]]))
