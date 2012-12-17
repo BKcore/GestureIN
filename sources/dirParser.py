@@ -72,7 +72,7 @@ class Viewer (QObject):
         self.original.setPixmap(QPixmap(self.fichier[ind]))
         img1,img2 = detect.loadAndProcess(self.fichier[ind])
 
-        hands = haar_classifier.detect_hands(cv2.imread(self.fichier[ind]), os.path.dirname(__file__) + '/../samples/haar-training/haarcascade/cascade.xml')
+        hands = haar_classifier.detect_hands(cv2.imread(self.fichier[ind]), os.path.dirname(os.path.realpath(__file__)) + '/../samples/haar-training/haarcascade/cascade.xml')
 
         for (x,y,w,h) in hands:
             cv2.rectangle(img1, (x,y), (x+w,y+h), 255)
