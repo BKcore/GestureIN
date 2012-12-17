@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import copy
 from optparse import OptionParser
-import haar_detect_hand
+import haar
 
 def loadRawSample(file):
   im = np.asarray(cv.Load(file))
@@ -112,8 +112,8 @@ def packFeatures(contour, hull, defects, shape, rect):
 
   return {'contour': contour, 'hull': hull, 'defects_nb': len(defects), 'defects': defects, 'shape': shape, 'boundingellipse': ellipse, 'angle': ellipse[2], 'centroid': center, 'rect': rect}
 
-def findROI(img):
-  hands = haar_detect_hand.detect_hands(img, '../samples/haar-training/haarcascade/cascade.xml')
+def findROI(img, haarc):
+  hands = haar.haarDetectHands(haarc, img)
 
   maxi = 0
   rect = None
@@ -133,12 +133,16 @@ def findROI(img):
   
   return imr, rect
 
-def loadAndProcess(file):
-  return process(loadSample(file))
+def loadAndProcess(file, haarc):
+  return process(loadSample(file), haarc)
 
-def process(file):
+def process(file, haarc=None):
+  
+  if haarc is None:
+    haarc = haar.haarInit(os.path.dirname(os.path.realpath(__file__)) + '/../samples/haar-training/haarcascade/cascade.xml')
+
   img_ref       = file
-  img, rect     = findROI(img_ref)
+  img, rect     = findROI(img_ref, haarc)
   imb           = extractBinary(img)
   imb_contours  = imb.copy()
   vect          = None

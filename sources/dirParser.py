@@ -15,9 +15,11 @@ import os.path
 import io,json
 
 import detect
-import haar_detect_hand as haar_classifier
+import haar
 
 class Viewer (QObject):
+    haarClassifier = haar.haarInit(os.path.dirname(os.path.realpath(__file__)) + '/../samples/haar-training/haarcascade/cascade.xml')
+
     def __init__(self):
         QObject.__init__(self)
         self.currentIm = 0
@@ -70,7 +72,7 @@ class Viewer (QObject):
 
     def setCurrentIm(self,ind):
         self.original.setPixmap(QPixmap(self.fichier[ind]))
-        img1,img2 = detect.loadAndProcess(self.fichier[ind])
+        img1,img2 = detect.loadAndProcess(self.fichier[ind], self.haarClassifier)
 
         width = img1.shape[1]
         height = img1.shape[0]
