@@ -18,7 +18,7 @@ import detect
 import haar
 
 class Viewer (QObject):
-    haarClassifier = haar.haarInit(os.path.dirname(os.path.realpath(__file__)) + '/../samples/haar-training/haarcascade/cascade.xml')
+    haarClassifier = haar.haarInit(os.path.dirname(os.path.realpath(__file__)) + '/../haar/training/cascade.xml')
 
     def __init__(self):
         QObject.__init__(self)

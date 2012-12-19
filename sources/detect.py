@@ -139,7 +139,7 @@ def loadAndProcess(file, haarc):
 def process(file, haarc=None):
   
   if haarc is None:
-    haarc = haar.haarInit(os.path.dirname(os.path.realpath(__file__)) + '/../samples/haar-training/haarcascade/cascade.xml')
+    haarc = haar.haarInit(os.path.dirname(os.path.realpath(__file__)) + '/../haar/training/cascade.xml')
 
   img_ref       = file
   img, rect     = findROI(img_ref, haarc)
