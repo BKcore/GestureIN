@@ -6,6 +6,8 @@ import numpy as np
 import copy
 from optparse import OptionParser
 import haar
+import os
+
 
 def loadRawSample(file):
   im = np.asarray(cv.Load(file))
@@ -139,7 +141,7 @@ def loadAndProcess(file, haarc):
 def process(file, haarc=None):
   
   if haarc is None:
-    haarc = haar.haarInit(os.path.dirname(os.path.realpath(__file__)) + '/../haar/training/cascade.xml')
+    haarc = haar.haarInit(os.path.dirname(os.path.realpath(__file__)) + '/../haar/cascade.xml')
 
   img_ref       = file
   img, rect     = findROI(img_ref, haarc)
@@ -147,6 +149,8 @@ def process(file, haarc=None):
   imb_contours  = imb.copy()
   vect          = None
   img_tr = np.copy(img_ref)
+
+  densityVect = zoning(imb)
 
   debugThresh(img)
 
@@ -233,6 +237,47 @@ def debugThresh(im):
     drawPoints(h, [(int(thresh), int(300-data[thresh]))], (0,0,255))
 
   cv2.imshow("dt", h)
+
+def zoning(imb):
+
+  imHand = binaryCrop(imb)
+
+  imWidth = imHand.shape[1] 
+  imHeight = imHand.shape[0] 
+
+  stepH = imHeight/3 -1
+  stepW = imWidth/3 -1
+
+  print stepW,stepH
+  print imWidth, imHeight
+
+  density = []
+
+  for i in range(0,imWidth-stepW,stepW):
+
+    for j in range(0,imHeight-stepH,stepH):
+
+      zone = imHand[j:j+stepH,i:i+stepW]
+      cv2.imshow("zone",zone)
+      zoneSize = zone.shape[0]*zone.shape[1]
+
+      density.append(float(np.count_nonzero(zone))/float(zoneSize))
+
+  return density
+
+def binaryCrop(imb):
+
+  vertInd = np.where(np.argmax(imb,axis = 0)>0)
+  y = vertInd[0][0] if vertInd[0].size else 0
+  y2 = vertInd[0][-1] if vertInd[0].size else imb.shape[0]
+
+  horInd = np.where(np.argmax(imb,axis = 1)>0)
+  x = horInd[0][0] if horInd[0].size else 0
+  x2 = horInd[0][-1] if horInd[0].size else imb.shape[1]
+  
+  crop = imb[x:x2,y:y2]
+  return crop
+
 
 
 if __name__ == '__main__' :
