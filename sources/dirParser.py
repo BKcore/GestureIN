@@ -18,7 +18,7 @@ import detect
 import haar
 
 class Viewer (QObject):
-    haarClassifier = haar.haarInit(os.path.dirname(os.path.realpath(__file__)) + '/../haar/training/cascade.xml')
+    haarClassifier = haar.haarInit(os.path.dirname(os.path.realpath(__file__)) + '/../haar/cascade.xml')
 
     def __init__(self):
         QObject.__init__(self)
@@ -33,6 +33,9 @@ class Viewer (QObject):
         self.fileName.setAlignment(Qt.AlignHCenter)
         self.fileClass = QLabel()
         self.fileClass.setAlignment(Qt.AlignHCenter)
+        self.prediction = QLabel()
+        self.classifier = cv2.NormalBayesClassifier()
+        self.classifier.load('../bayes/bayes.xml')
         self.dictionary = dict()
         self.doPlay = False
         self.startTimer(1000/12)
@@ -72,8 +75,30 @@ class Viewer (QObject):
 
     def setCurrentIm(self,ind):
         self.original.setPixmap(QPixmap(self.fichier[ind]))
-        img1,img2 = detect.loadAndProcess(self.fichier[ind], self.haarClassifier)
 
+        img1,img2,density= detect.loadAndProcess(self.fichier[ind], self.haarClassifier)
+    
+        sample = np.matrix(density).astype('float32')
+        _,result = self.classifier.predict(sample)
+
+        bayesResult = int(result[[0]])
+
+        if(bayesResult == -1):
+            self.prediction.setText("Pas de main")
+        elif(bayesResult == 0):
+            self.prediction.setText("Poing")
+        elif(bayesResult==1):
+            self.prediction.setText("1 doigt")
+        elif(bayesResult==2):
+            self.prediction.setText("2 doigts")
+        elif(bayesResult==3):
+            self.prediction.setText("3 doigts")
+        elif(bayesResult==4):
+            self.prediction.setText("4 doigts")
+        elif(bayesResult==5):
+            self.prediction.setText("5 doigts")
+
+        
         width = img1.shape[1]
         height = img1.shape[0]
 
@@ -179,6 +204,7 @@ if __name__ == '__main__' :
     hLayout.addWidget(v.original)
     hLayout.addWidget(v.transform1)
     hLayout.addWidget(v.transform2)
+    hLayout.addWidget(v.prediction)
     hLayout.addWidget(next)
 
     buttonLayout.addWidget(playButton)
