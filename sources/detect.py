@@ -149,13 +149,12 @@ def process(file, haarc=None):
   imb_contours  = imb.copy()
   vect          = None
   img_tr = np.copy(img_ref)
-
   densityVect = zoning(imb)
 
   debugThresh(img)
 
   if rect is None:
-    return img_ref, img_ref
+    return img_ref, img_ref,densityVect
 
   contours, _ = cv2.findContours(imb_contours, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -179,14 +178,16 @@ def process(file, haarc=None):
     img_ref[y:y+h, x:x+w] = img
     cv2.rectangle(img_ref, (x,y), (x+w,y+h), (255,0,0))
     img_tr[y:y+h, x:x+w] = imb
+  
 
   else:
     img_ref = cv2.cvtColor(img_ref,cv2.COLOR_GRAY2BGR)
     img_tr = imb
-  
+
+  densityVect = zoning(imb)
   img_tr = cv2.cvtColor(img_tr,cv2.COLOR_GRAY2BGR)
   
-  return img_ref, img_tr
+  return img_ref, img_tr,densityVect
 
 def smoothHist(im):
   hist_item = cv2.calcHist([im],[0],None,[256],[0,255])
@@ -248,9 +249,6 @@ def zoning(imb):
   stepH = imHeight/3 -1
   stepW = imWidth/3 -1
 
-  print stepW,stepH
-  print imWidth, imHeight
-
   density = []
 
   for i in range(0,imWidth-stepW,stepW):
@@ -291,7 +289,7 @@ if __name__ == '__main__' :
   cv2.namedWindow("Debug")
   cv2.namedWindow("Result")
 
-  img_result, img_debug = process(loadSample(options.filename))
+  img_result, img_debug, density = process(loadSample(options.filename))
 
   cv2.imshow("Debug", img_debug)
   cv2.imshow("Result", img_result)
