@@ -249,6 +249,12 @@ def zoning(imb):
   stepH = imHeight/3 -1
   stepW = imWidth/3 -1
 
+  if(stepH == 0):
+    stepH = 1 
+
+  if (stepW == 0):
+    stepH = 1
+
   density = []
 
   for i in range(0,imWidth-stepW,stepW):
@@ -261,6 +267,10 @@ def zoning(imb):
 
       density.append(float(np.count_nonzero(zone))/float(zoneSize))
 
+  if(density == []):
+    density = [-1,-1,-1,-1,-1,-1,-1,-1,-1]
+  elif(len(density)!=9):
+    density = [0,0,0,0,0,0,0,0,0]
   return density
 
 def binaryCrop(imb):
