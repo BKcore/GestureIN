@@ -138,7 +138,7 @@ def findROI(img, haarc):
 def loadAndProcess(file, haarc):
   return process(loadSample(file), haarc)
 
-def process(file, haarc=None):
+def process(file, haarc=None,silent=False):
   
   if haarc is None:
     haarc = haar.haarInit(os.path.dirname(os.path.realpath(__file__)) + '/../haar/cascade.xml')
@@ -149,12 +149,13 @@ def process(file, haarc=None):
   imb_contours  = imb.copy()
   vect          = None
   img_tr = np.copy(img_ref)
-  densityVect = zoning(imb)
-
-  debugThresh(img)
+  
+  if not silent:
+    debugThresh(img)
 
   if rect is None:
-    return img_ref, img_ref,densityVect
+    img_ref = cv2.cvtColor(img_ref,cv2.COLOR_GRAY2BGR)
+    return img_ref, img_ref, None
 
   contours, _ = cv2.findContours(imb_contours, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -241,36 +242,53 @@ def debugThresh(im):
 
 def zoning(imb):
 
+  cut = 7
   imHand = binaryCrop(imb)
 
   imWidth = imHand.shape[1] 
   imHeight = imHand.shape[0] 
 
-  stepH = imHeight/3 -1
-  stepW = imWidth/3 -1
+  stepH = imHeight/cut -1
+  stepW = imWidth/cut -1
 
-  if(stepH == 0):
+  if(stepH < 1):
     stepH = 1 
 
-  if (stepW == 0):
-    stepH = 1
+  if (stepW < 1):
+    stepW = 1
+
+  if imWidth <= cut or imHeight <= cut:
+    return None
 
   density = []
+  
+  x = 1
 
   for i in range(0,imWidth-stepW,stepW):
 
+    if x>cut:
+      continue
+
+    x = x+1
+    y = 1
+
     for j in range(0,imHeight-stepH,stepH):
 
+      if y>cut :
+        continue
+
+      y = y+1
+
       zone = imHand[j:j+stepH,i:i+stepW]
-      cv2.imshow("zone",zone)
       zoneSize = zone.shape[0]*zone.shape[1]
 
       density.append(float(np.count_nonzero(zone))/float(zoneSize))
 
-  if(density == []):
-    density = [-1,-1,-1,-1,-1,-1,-1,-1,-1]
-  elif(len(density)!=9):
-    density = [0,0,0,0,0,0,0,0,0]
+  
+  if(len(density)!= cut*cut):
+    print "Cut is too large for ROI"
+    return None
+    
   return density
 
 def binaryCrop(imb):

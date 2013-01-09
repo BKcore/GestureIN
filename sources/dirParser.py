@@ -35,7 +35,7 @@ class Viewer (QObject):
         self.fileClass.setAlignment(Qt.AlignHCenter)
         self.prediction = QLabel()
         self.classifier = cv2.NormalBayesClassifier()
-        self.classifier.load('../bayes/bayes.xml')
+        self.classifier.load(os.path.dirname(os.path.realpath(__file__)) + '/../bayes/bayes.xml')
         self.dictionary = dict()
         self.doPlay = False
         self.startTimer(1000/12)
@@ -77,26 +77,32 @@ class Viewer (QObject):
         self.original.setPixmap(QPixmap(self.fichier[ind]))
 
         img1,img2,density= detect.loadAndProcess(self.fichier[ind], self.haarClassifier)
-    
-        sample = np.matrix(density).astype('float32')
-        _,result = self.classifier.predict(sample)
 
-        bayesResult = int(result[[0]])
+        if density is None:
 
-        if(bayesResult == -1):
-            self.prediction.setText("Pas de main")
-        elif(bayesResult == 0):
-            self.prediction.setText("Poing")
-        elif(bayesResult==1):
-            self.prediction.setText("1 doigt")
-        elif(bayesResult==2):
-            self.prediction.setText("2 doigts")
-        elif(bayesResult==3):
-            self.prediction.setText("3 doigts")
-        elif(bayesResult==4):
-            self.prediction.setText("4 doigts")
-        elif(bayesResult==5):
-            self.prediction.setText("5 doigts")
+            self.prediction.setText('Pas de main')
+            
+        else:
+
+            sample = np.matrix(density).astype('float32')
+            _,result = self.classifier.predict(sample)
+
+            bayesResult = int(result[[0]])
+
+            if(bayesResult == -1):
+                self.prediction.setText("Pas de main")
+            elif(bayesResult == 0):
+                self.prediction.setText("Poing")
+            elif(bayesResult==1):
+                self.prediction.setText("1 doigt")
+            elif(bayesResult==2):
+                self.prediction.setText("2 doigts")
+            elif(bayesResult==3):
+                self.prediction.setText("3 doigts")
+            elif(bayesResult==4):
+                self.prediction.setText("4 doigts")
+            elif(bayesResult==5):
+                self.prediction.setText("5 doigts")
 
         
         width = img1.shape[1]

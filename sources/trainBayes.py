@@ -37,19 +37,15 @@ if __name__ == '__main__' :
 	trainData = []
 
 	responses = []
-
+	total = len(filesNames)
+	i = 1
 	for fileName in filesNames:
-		img_ref = detect.loadSample(fileName)
-		img,rect = detect.findROI(img_ref,haarc)
-		imb = detect.extractBinary(img)
-		if(rect is None):
-			densityVect = [-1,-1, -1, -1, -1, -1, -1, -1, -1]
-		else:
-			(x,y,w,h) = rect	
-			if(w<5 or h<5):
-				densityVect = [-1, -1, -1, -1, -1, -1, -1, -1, -1]
-			else:
-				densityVect = detect.zoning(imb)	
+		print "{0} / {1}".format(i,total)
+		i = i+1
+		_,_,densityVect = detect.process(detect.loadSample(fileName),haarc,True)
+
+		if densityVect is None:
+			continue
 
 		trainData.append(densityVect)
 		responses.append(class_dict[fileName])
